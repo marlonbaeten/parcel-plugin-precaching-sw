@@ -13,8 +13,6 @@ The plugin is configurable by adding a `precachingSW` entry to your package.json
     ],
     "additional": [],
     "offlineUrl": "/offline.html",
-    "fileName": "sw.js",
-    "outDir": "./"
   },
 ```
 
@@ -29,9 +27,6 @@ The plugin is configurable by adding a `precachingSW` entry to your package.json
   - webmanifest
 - `additional` &rarr; Array containing additional files that must be added to the cache.
 - `offlineUrl` &rarr; Url of the offline html file, this file will be added to the cache as well. Defaults to `offline.html`.
-- `fileName` &rarr; The name of the file that holds the generated serviceworker. Defaults to `sw.js`.
-- `outDir` &rarr; The path to the directory where the serviceworker file will be saved to. Defaults to `./`.
-
 
 ## Example
 

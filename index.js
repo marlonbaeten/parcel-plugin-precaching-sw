@@ -1,10 +1,13 @@
 /* eslint-disable no-console */
 
 const {
-  readFileSync, writeFileSync, unlinkSync, existsSync,
+  readFileSync,
+  writeFileSync,
+  unlinkSync,
+  existsSync,
 } = require('fs');
-const path = require('path');
 
+const path = require('path');
 
 const defaultConfig = {
   bypass: false,
@@ -19,10 +22,7 @@ const defaultConfig = {
   ],
   additional: [],
   offlineUrl: '/offline.html',
-  fileName: 'sw.js',
-  outDir: path.resolve(__dirname, '../'),
 };
-
 
 const getConfig = (pkg, bundleId) => {
   const conf = pkg.precachingSW || {};
@@ -31,8 +31,6 @@ const getConfig = (pkg, bundleId) => {
     bypass = defaultConfig.bypass,
     allowed = defaultConfig.allowed,
     additional = defaultConfig.additional,
-    outDir = defaultConfig.outDir,
-    fileName = defaultConfig.fileName,
     offlineUrl = defaultConfig.offlineUrl,
   } = conf;
 
@@ -42,8 +40,6 @@ const getConfig = (pkg, bundleId) => {
       bypass = bypass,
       allowed = allowed,
       additional = additional,
-      outDir = outDir,
-      fileName = fileName,
       offlineUrl = offlineUrl,
     } = bundleConfig);
   }
@@ -53,7 +49,6 @@ const getConfig = (pkg, bundleId) => {
     allowed,
     additional,
     offlineUrl,
-    path: path.resolve(outDir, fileName),
   };
 };
 
@@ -75,15 +70,10 @@ const getAssets = (bundle, result = []) => {
   return result;
 };
 
-
 const createServiceWorker = async (bundle, outDir) => {
   const bundleId = bundle.entryAsset.id;
   const pkg = await bundle.entryAsset.getPackage();
   const config = getConfig(pkg, bundleId);
-  // console.log('BUNDLE', bundle);
-  // console.log('PKG', pkg);
-  // console.log('ID', bundleId);
-  // console.log('CONFIG', config);
 
   if (config.bypass === true) {
     if (existsSync(config.path)) {
@@ -108,19 +98,15 @@ const createServiceWorker = async (bundle, outDir) => {
   const cache = JSON.stringify(assets);
   const cacheName = `${pkg.name}-${bundle.entryAsset.hash.substr(0, 8)}`;
 
-  const template = readFileSync(path.resolve(
-    __dirname,
-    './precaching-sw.template.js',
-  ), 'utf8');
+  const templatePath = path.resolve(__dirname, './sw.template.js');
+  const template = readFileSync(templatePath, 'utf8');
 
   const sw = template
-    .replace('%{created}', new Date())
-    .replace('\'%{caches}\'', cache)
+    .replace('%{caches}', cache)
     .replace('%{cacheName}', cacheName)
-    .replace('%{offlineUrl}', config.offlineUrl)
-    .replace(/"/g, '\'');
+    .replace('%{offlineUrl}', config.offlineUrl);
 
-  writeFileSync(config.path, sw);
+  writeFileSync(`${outDir}/sw.js`, sw);
 };
 
 
