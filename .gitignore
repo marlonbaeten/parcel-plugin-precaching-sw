@@ -1,5 +1,4 @@
-.cache
-dist
-node_modules
-*sw.js
-output*.js
+.cache/
+.node-cache/
+dist/
+node_modules/

@@ -21,7 +21,7 @@ const defaultConfig = {
     'webmanifest',
   ],
   additional: [],
-  offlineUrl: '/offline.html',
+  offlineUrl: '/index.html',
 };
 
 const getConfig = (pkg, bundleId) => {
@@ -56,6 +56,7 @@ const getConfig = (pkg, bundleId) => {
 /**
  * Flatten the bundle structure to array of strings
  * @param bundle
+ * @param result
  * @returns {*[]}
  */
 const getAssets = (bundle, result = []) => {
@@ -107,9 +108,11 @@ const createServiceWorker = async (bundle, outDir) => {
     .replace('%{offlineUrl}', config.offlineUrl);
 
   if (bundle.entryAsset.basename === 'index.html') {
-    const registerSW = "if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }";
-    const html = bundle.entryAsset.generated.html.replace('</body>', `<script>${registerSW}</script></body>`);
-    writeFileSync(`${outDir}/index.html`, html);
+    const registerSW = 'if (\'serviceWorker\' in navigator) { navigator.serviceWorker.register(\'/sw.js\'); }';
+    const file = `${outDir}/index.html`;
+    const fileContents = readFileSync(file);
+    const html = fileContents.toString().replace('</body>', `<script>${registerSW}</script></body>`);
+    writeFileSync(file, html);
   }
 
   writeFileSync(`${outDir}/sw.js`, sw);
@@ -117,14 +120,16 @@ const createServiceWorker = async (bundle, outDir) => {
 
 
 module.exports = (bundler) => {
-  const { outDir } = bundler.options;
-  bundler.on('bundled', async (bundle) => {
-    if (bundle.entryAsset === null && bundle.childBundles) {
-      bundle.childBundles.forEach((b) => {
-        createServiceWorker(b, outDir);
-      });
-    } else {
-      createServiceWorker(bundle, outDir);
-    }
-  });
+  if (process.env.NODE_ENV === 'production') {
+    const { outDir } = bundler.options;
+    bundler.on('bundled', async (bundle) => {
+      if (bundle.entryAsset === null && bundle.childBundles) {
+        bundle.childBundles.forEach((b) => {
+          createServiceWorker(b, outDir);
+        });
+      } else {
+        createServiceWorker(bundle, outDir);
+      }
+    });
+  }
 };
