@@ -1,34 +1,35 @@
+const PRECACHE_URLS = %{caches};
+const PRECACHE = '%{cacheName}';
 
-
-const files = %{caches};
-const cacheName = '%{cacheName}';
-const offlineUrl = '%{offlineUrl}';
-
-self.addEventListener('install', function(e) {
-  e.waitUntil(caches.open(cacheName).then(function(cache) {
-    cache.addAll(files).then(() => self.skipWaiting());
-  }));
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(PRECACHE)
+      .then(cache => cache.addAll(PRECACHE_URLS))
+      .then(self.skipWaiting())
+  );
 });
 
-self.addEventListener('activate', function(event) {
-  event.waitUntil(self.clients.claim());
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys()
+      .then(cacheNames => cacheNames.filter(
+        cacheName => cacheName !== PRECACHE
+      ))
+      .then(cachesToDelete => Promise.all(
+        cachesToDelete.map(cacheToDelete => caches.delete(cacheToDelete))
+      ))
+      .then(() => self.clients.claim())
+  );
 });
 
-self.addEventListener('fetch', function(event) {
+self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') {
     return;
   }
 
-  if (event.request.mode === 'navigate' || event.request.headers.get('accept').includes('text/html')) {
-    event.respondWith(
-      fetch(event.request)
-        .catch(() => caches.match(offlineUrl))
-    );
-  } else {
-    event.respondWith(
-      caches.match(event.request)
-        .then(response => response || fetch(event.request))
-        .catch(() => fetch(event.request))
-    );
-  }
+  event.respondWith(
+    caches.match(event.request)
+      .then(response => response || fetch(event.request))
+      .catch(() => caches.match(PRECACHE_URLS[0]))
+  );
 });

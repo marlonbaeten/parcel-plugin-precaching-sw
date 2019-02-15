@@ -1,17 +1,15 @@
-/* eslint-disable no-console */
-
 const {
   readFileSync,
   writeFileSync,
   unlinkSync,
   existsSync,
 } = require('fs');
-
 const path = require('path');
 
 const defaultConfig = {
   bypass: false,
   allowed: [
+    'html',
     'css',
     'js',
     'woff2',
@@ -21,37 +19,7 @@ const defaultConfig = {
     'webmanifest',
   ],
   additional: [],
-  offlineUrl: '/index.html',
 };
-
-const getConfig = (pkg, bundleId) => {
-  const conf = pkg.precachingSW || {};
-
-  let {
-    bypass = defaultConfig.bypass,
-    allowed = defaultConfig.allowed,
-    additional = defaultConfig.additional,
-    offlineUrl = defaultConfig.offlineUrl,
-  } = conf;
-
-  const bundleConfig = conf[bundleId];
-  if (bundleConfig) {
-    ({
-      bypass = bypass,
-      allowed = allowed,
-      additional = additional,
-      offlineUrl = offlineUrl,
-    } = bundleConfig);
-  }
-
-  return {
-    bypass,
-    allowed,
-    additional,
-    offlineUrl,
-  };
-};
-
 
 /**
  * Flatten the bundle structure to array of strings
@@ -71,31 +39,34 @@ const getAssets = (bundle, result = []) => {
   return result;
 };
 
+/**
+ * Create a service worker and inject in resulting html page
+ * @param bundle
+ * @param outDir
+ * @returns {Promise<void>}
+ */
 const createServiceWorker = async (bundle, outDir) => {
-  const bundleId = bundle.entryAsset.id;
   const pkg = await bundle.entryAsset.getPackage();
-  const config = getConfig(pkg, bundleId);
+  const config = {
+    ...defaultConfig,
+    ...(pkg.precachingSW || {}),
+  };
 
   if (config.bypass === true) {
     if (existsSync(config.path)) {
       unlinkSync(config.path);
     }
-    console.log(`Not generating a precaching serviceworker for "${bundleId}".`);
     return;
   }
 
   const assets = getAssets(bundle).filter((name) => {
-    if (name.includes('/icon_')) {
-      return false;
-    }
     const ext = name.split('.').pop();
     return config.allowed.includes(ext);
-  }).map(name => name.replace(outDir, '/assets'));
+  }).map(name => name.replace(outDir, ''));
 
   if (config.additional && config.additional.length > 0) {
     assets.push(...config.additional);
   }
-  assets.push(config.offlineUrl);
   const cache = JSON.stringify(assets);
   const cacheName = `${pkg.name}-${bundle.entryAsset.hash.substr(0, 8)}`;
 
@@ -104,8 +75,7 @@ const createServiceWorker = async (bundle, outDir) => {
 
   const sw = template
     .replace('%{caches}', cache)
-    .replace('%{cacheName}', cacheName)
-    .replace('%{offlineUrl}', config.offlineUrl);
+    .replace('%{cacheName}', cacheName);
 
   if (bundle.entryAsset.basename === 'index.html') {
     const registerSW = 'if (\'serviceWorker\' in navigator) { navigator.serviceWorker.register(\'/sw.js\'); }';
@@ -117,7 +87,6 @@ const createServiceWorker = async (bundle, outDir) => {
 
   writeFileSync(`${outDir}/sw.js`, sw);
 };
-
 
 module.exports = (bundler) => {
   if (process.env.NODE_ENV === 'production') {
