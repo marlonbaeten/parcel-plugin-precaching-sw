@@ -1,10 +1,12 @@
-const caches = %{caches};
+
+
+const files = %{caches};
 const cacheName = '%{cacheName}';
 const offlineUrl = '%{offlineUrl}';
 
 self.addEventListener('install', function(e) {
   e.waitUntil(caches.open(cacheName).then(function(cache) {
-    cache.addAll(caches).then(() => self.skipWaiting());
+    cache.addAll(files).then(() => self.skipWaiting());
   }));
 });
 

@@ -106,6 +106,12 @@ const createServiceWorker = async (bundle, outDir) => {
     .replace('%{cacheName}', cacheName)
     .replace('%{offlineUrl}', config.offlineUrl);
 
+  if (bundle.entryAsset.basename === 'index.html') {
+    const registerSW = "if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/service-worker.js'); }";
+    const html = bundle.entryAsset.generated.html.replace('</body>', `<script>${registerSW}</script></body>`);
+    writeFileSync(`${outDir}/index.html`, html);
+  }
+
   writeFileSync(`${outDir}/sw.js`, sw);
 };
 
